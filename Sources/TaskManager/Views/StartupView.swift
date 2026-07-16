@@ -46,7 +46,9 @@ struct StartupView: View {
                         state: columnState
                     )
 
-                    if rows.isEmpty {
+                    if !monitor.hasLoadedSlow {
+                        loadingState
+                    } else if rows.isEmpty {
                         emptyState
                     } else {
                         ScrollView(.vertical) {
@@ -75,6 +77,21 @@ struct StartupView: View {
             else { return }
             setEnabled(row.status != "Enabled", row)
         }
+    }
+
+
+    /// launchd and login-item scans are subprocesses that answer a few seconds
+    /// after launch; an empty table in the meantime reads as broken.
+    private var loadingState: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Reading startup items…")
+                .font(WinTheme.Typography.row)
+                .foregroundStyle(WinTheme.Palette.textSecondary(scheme))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 40)
     }
 
     private var emptyState: some View {

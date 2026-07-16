@@ -363,7 +363,12 @@ footer nav{display:flex; gap:16px; flex-wrap:wrap}
         <p>macOS provides no API to pin a process to specific cores. The scheduler does not expose that control to userspace, so the menu item does not exist.</p>
       </div>
 
-      <p style="margin:28px 0 0"><a href="limitations.md">Read the full write-up on what macOS does and doesn't expose about process resource usage &rarr;</a></p>
+      <!-- TODO(maintainer): this points at the GitHub-rendered copy because
+           docs/limitations.md has no Jekyll front matter and would otherwise be
+           served as raw text. Add front matter to it, then change this href to
+           "limitations.html" and uncomment its entry in sitemap.xml. See
+           docs/README.md step 7 — this is the page most likely to earn links. -->
+      <p style="margin:28px 0 0"><a href="https://github.com/yatindma/task-manager-for-mac/blob/main/docs/limitations.md">Read the full write-up on what macOS does and doesn't expose about process resource usage &rarr;</a></p>
     </div>
   </section>
 

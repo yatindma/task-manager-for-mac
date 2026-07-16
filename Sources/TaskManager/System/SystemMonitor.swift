@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// Everything the samplers produce in one tick.
+/// What the fast path produces every tick.
 private struct Snapshot {
     var cpu: CPUStats
     var memory: MemoryStats
@@ -10,10 +10,14 @@ private struct Snapshot {
     var gpus: [GPUStats]
     var processes: [ProcRow]
     var appHistory: [AppHistoryRow]
-    /// Only populated on slow ticks; nil means "keep what is on screen".
-    var services: [ServiceRow]?
-    var startupItems: [StartupRow]?
-    var users: [UserRow]?
+}
+
+/// The subprocess-backed samplers, which answer in seconds rather than
+/// milliseconds and whose answers barely move.
+private struct SlowSnapshot {
+    var services: [ServiceRow]
+    var startupItems: [StartupRow]
+    var users: [UserRow]
 }
 
 /// Holds the samplers off the main actor. Every method here runs on the
@@ -31,9 +35,10 @@ private final class SamplerSet {
     private let user = UserSampler()
     private let history = AppHistoryStore()
 
-    func snapshot(includeSlow: Bool) -> Snapshot {
+    func snapshot() -> Snapshot {
         let processes = process.sample()
         history.record(processes)
+        lastProcesses = processes
 
         var cpuStats = cpu.sample()
         cpuStats.processCount = countProcesses(processes)
@@ -47,12 +52,28 @@ private final class SamplerSet {
             networks: network.sample(),
             gpus: gpu.sample(),
             processes: processes,
-            appHistory: history.rows(),
-            services: includeSlow ? service.sample() : nil,
-            startupItems: includeSlow ? startup.sample() : nil,
-            users: includeSlow ? user.sample(processes: processes) : nil
+            appHistory: history.rows()
         )
     }
+
+    /// Runs on its own queue. UserSampler needs the process list, and reusing the
+    /// last fast snapshot avoids a second full enumeration just to attribute rows
+    /// to accounts.
+    func slowSnapshot() -> SlowSnapshot {
+        SlowSnapshot(
+            services: service.sample(),
+            startupItems: startup.sample(),
+            users: user.sample(processes: lastProcesses)
+        )
+    }
+
+    /// Written on the fast queue, read on the slow one — hence the lock.
+    private var lastProcesses: [ProcRow] {
+        get { lock.withLock { _lastProcesses } }
+        set { lock.withLock { _lastProcesses = newValue } }
+    }
+    private var _lastProcesses: [ProcRow] = []
+    private let lock = NSLock()
 
     private func countProcesses(_ rows: [ProcRow]) -> Int {
         rows.reduce(0) { $0 + 1 + countProcesses($1.children) }
@@ -84,15 +105,26 @@ final class SystemMonitor: ObservableObject {
     @Published var users: [UserRow] = []
     @Published var appHistory: [AppHistoryRow] = []
 
-    /// launchctl / who / login-item scans cost tens of milliseconds of subprocess
-    /// each, and their answers barely move. Run them once per this many ticks.
-    private static let slowTickStride = 10
+    /// True once the first fast sample lands, so tables can say "loading" instead
+    /// of rendering as an empty list that looks broken.
+    @Published private(set) var hasLoaded = false
+
+    /// The slow set answers seconds later than the fast one, so the tabs backed by
+    /// it need their own flag — sharing `hasLoaded` would show them as empty.
+    @Published private(set) var hasLoadedSlow = false
+
+    /// launchctl / system_profiler / login-item scans are subprocesses costing
+    /// seconds between them, and their answers barely move. They run on their own
+    /// queue at this cadence so they can never stall the 1 Hz fast path.
+    private static let slowInterval: TimeInterval = 10
 
     private let samplers = SamplerSet()
     private let queue = DispatchQueue(label: "com.taskmanager.sampling", qos: .utility)
+    private let slowQueue = DispatchQueue(label: "com.taskmanager.sampling.slow", qos: .background)
     private var timer: Timer?
-    private var tick = 0
+    private var slowTimer: Timer?
     private var sampling = false
+    private var samplingSlow = false
 
     private init() {}
 
@@ -103,40 +135,61 @@ final class SystemMonitor: ObservableObject {
     func start(interval: TimeInterval) {
         stop()
         guard !AppState.shared.isPaused else { return }
-        // First tick immediately so the window never opens on empty tables.
-        fire(forceSlow: true)
+
+        fire()
+        fireSlow()
+
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.fire(forceSlow: false) }
+            Task { @MainActor in self?.fire() }
         }
         timer.tolerance = interval * 0.1
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+
+        let slow = Timer(timeInterval: Self.slowInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.fireSlow() }
+        }
+        slow.tolerance = Self.slowInterval * 0.5
+        RunLoop.main.add(slow, forMode: .common)
+        self.slowTimer = slow
     }
 
     func stop() {
         timer?.invalidate()
         timer = nil
+        slowTimer?.invalidate()
+        slowTimer = nil
     }
 
     func refreshNow() {
-        fire(forceSlow: true)
+        fire()
+        fireSlow()
     }
 
     // MARK: - Tick
 
-    private func fire(forceSlow: Bool) {
-        // A slow tick can outlast the timer interval; dropping the overlap keeps
-        // the queue from growing a backlog of stale work.
+    private func fire() {
+        // A tick can outlast the timer interval; dropping the overlap keeps the
+        // queue from growing a backlog of stale work.
         guard !sampling else { return }
         sampling = true
 
-        let includeSlow = forceSlow || tick % Self.slowTickStride == 0
-        tick &+= 1
-
         queue.async { [samplers] in
-            let snapshot = samplers.snapshot(includeSlow: includeSlow)
+            let snapshot = samplers.snapshot()
             Task { @MainActor [weak self] in
                 self?.apply(snapshot)
+            }
+        }
+    }
+
+    private func fireSlow() {
+        guard !samplingSlow else { return }
+        samplingSlow = true
+
+        slowQueue.async { [samplers] in
+            let snapshot = samplers.slowSnapshot()
+            Task { @MainActor [weak self] in
+                self?.applySlow(snapshot)
             }
         }
     }
@@ -149,9 +202,15 @@ final class SystemMonitor: ObservableObject {
         gpus = snapshot.gpus
         processes = snapshot.processes
         appHistory = snapshot.appHistory
-        if let services = snapshot.services { self.services = services }
-        if let startupItems = snapshot.startupItems { self.startupItems = startupItems }
-        if let users = snapshot.users { self.users = users }
         sampling = false
+        hasLoaded = true
+    }
+
+    private func applySlow(_ snapshot: SlowSnapshot) {
+        services = snapshot.services
+        startupItems = snapshot.startupItems
+        users = snapshot.users
+        samplingSlow = false
+        hasLoadedSlow = true
     }
 }

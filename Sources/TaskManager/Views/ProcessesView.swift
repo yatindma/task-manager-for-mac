@@ -30,6 +30,9 @@ struct ProcessesView: View {
                 state: columnState
             )
 
+            if !monitor.hasLoaded {
+                loadingState
+            } else {
             ScrollView(.vertical) {
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
                     ForEach(groups, id: \.kind) { group in
@@ -55,9 +58,23 @@ struct ProcessesView: View {
             .onDeleteCommand {
                 if let pid = app.selectedPID { _ = ProcessActions.endTask(pid) }
             }
+            }
         }
         }
         .background(WinTheme.Palette.card(scheme))
+    }
+
+    /// The first sample enumerates every process on the machine, so there is a
+    /// beat before the table can render. An empty table reads as broken.
+    private var loadingState: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Reading processes…")
+                .font(WinTheme.Typography.row)
+                .foregroundStyle(WinTheme.Palette.textSecondary(scheme))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Columns

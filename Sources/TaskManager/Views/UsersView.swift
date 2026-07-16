@@ -45,6 +45,9 @@ struct UsersView: View {
                 state: columnState
             )
 
+            if !monitor.hasLoadedSlow {
+                loadingState
+            } else {
             ScrollView(.vertical) {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(monitor.users) { user in
@@ -93,9 +96,24 @@ struct UsersView: View {
                     }
                 }
             }
+            }
         }
         }
         .background(WinTheme.Palette.card(scheme))
+    }
+
+    /// launchd, login items and session lookups are subprocesses that answer a
+    /// few seconds after launch; an empty table in the meantime reads as broken.
+    private var loadingState: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Reading signed-in accounts…")
+                .font(WinTheme.Typography.row)
+                .foregroundStyle(WinTheme.Palette.textSecondary(scheme))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 40)
     }
 
     // MARK: - Columns

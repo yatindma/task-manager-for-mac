@@ -17,11 +17,15 @@ struct PerformanceView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            if !summaryView {
-                sidebar
-                Divider()
+            if !monitor.hasLoaded {
+                loadingState
+            } else {
+                if !summaryView {
+                    sidebar
+                    Divider()
+                }
+                detail
             }
-            detail
         }
         .background(WinTheme.Palette.card(scheme))
         .onChange(of: monitor.disks.count) { _, _ in normalizeSelection() }
@@ -31,6 +35,19 @@ struct PerformanceView: View {
         // CPU / Logical processors and back, instead of living inside that view.
         .onAppear { CoreHistoryStore.shared.record(monitor.cpu.perCore) }
         .onChange(of: monitor.cpu.perCore) { _, new in CoreHistoryStore.shared.record(new) }
+    }
+
+    /// The graphs need a first sample before they can draw anything; an empty
+    /// axis frame reads as a broken app rather than a loading one.
+    private var loadingState: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Reading performance counters…")
+                .font(WinTheme.Typography.row)
+                .foregroundStyle(WinTheme.Palette.textSecondary(scheme))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Sidebar

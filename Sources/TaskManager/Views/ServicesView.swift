@@ -160,10 +160,14 @@ struct ServicesView: View {
                         sortColumn: $sortColumn,
                         sortDirection: $sortDirection
                     )
-                    ScrollView(.vertical) {
-                        LazyVStack(spacing: 0) {
-                            ForEach(rows) { row in
-                                rowView(row).id(row.label)
+                    if !monitor.hasLoadedSlow {
+                        loadingState
+                    } else {
+                        ScrollView(.vertical) {
+                            LazyVStack(spacing: 0) {
+                                ForEach(rows) { row in
+                                    rowView(row).id(row.label)
+                                }
                             }
                         }
                     }
@@ -178,6 +182,21 @@ struct ServicesView: View {
             else { return }
             control(isRunning(row) ? .stop : .start, row)
         }
+    }
+
+
+    /// launchd and login-item scans are subprocesses that answer a few seconds
+    /// after launch; an empty table in the meantime reads as broken.
+    private var loadingState: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Reading launchd services…")
+                .font(WinTheme.Typography.row)
+                .foregroundStyle(WinTheme.Palette.textSecondary(scheme))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 40)
     }
 
     // MARK: Row

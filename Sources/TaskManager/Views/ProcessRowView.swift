@@ -5,6 +5,26 @@ import SwiftUI
 /// Memory is a share of installed RAM; Disk and Network are relative share of
 /// system throughput weighted by how busy the system actually is, so nothing
 /// reads as "hot" on an idle machine.
+/// Exactly one frame per cell — a fixed width where the column has one, a flexible
+/// one where it doesn't. `.frame(width:)` and `.frame(maxWidth:)` are separate
+/// overloads and cannot be combined, and stacking them makes SwiftUI negotiate twice
+/// for every cell.
+private struct CellFrame: ViewModifier {
+    let width: CGFloat?
+    let alignment: Alignment
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let width {
+            // Both dimensions stated outright: nothing left to negotiate.
+            content.frame(width: width, height: WinTheme.Metrics.rowHeight, alignment: alignment)
+        } else {
+            content.frame(maxWidth: .infinity, minHeight: WinTheme.Metrics.rowHeight,
+                          maxHeight: WinTheme.Metrics.rowHeight, alignment: alignment)
+        }
+    }
+}
+
 struct ProcessHeatScale {
     var totalRAM: Double
     var totalDiskRate: Double
@@ -59,8 +79,17 @@ struct ProcessRowView: View {
 
     // MARK: Cells
 
+    /// One frame per cell, deliberately.
+    ///
+    /// This runs ~9 times per row across ~620 rows every tick. Proposing .infinity
+    /// on the inner Text and then constraining it with an outer fixed-width frame
+    /// made SwiftUI re-negotiate all three boxes for all ~17,000 cells each second —
+    /// a profile of the Processes tab was almost entirely LayoutEngineBox.sizeThatFits.
+    /// Collapsing to a single frame that states the width outright removes the
+    /// negotiation.
     @ViewBuilder
     private func cell(_ spec: TableColumnSpec) -> some View {
+        let width = state.width(spec)
         Group {
             if spec.id == ProcColumn.name.rawValue {
                 nameCell
@@ -69,12 +98,10 @@ struct ProcessRowView: View {
                     .font(WinTheme.Typography.row)
                     .foregroundStyle(WinTheme.Palette.textPrimary(scheme))
                     .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: spec.alignment)
             }
         }
         .padding(.horizontal, WinTheme.Metrics.cellPadding)
-        .frame(width: state.width(spec), alignment: spec.alignment)
-        .frame(maxWidth: state.width(spec) == nil ? .infinity : nil, maxHeight: .infinity)
+        .modifier(CellFrame(width: width, alignment: spec.alignment))
         .background(heatColor(for: spec))
     }
 
