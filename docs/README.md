@@ -34,32 +34,23 @@ out in the comment above it. The placeholder reserves the **same 16:10 box** as 
 image, so swapping causes **zero layout shift** — do not drop the `width`/`height`
 attributes.
 
-### Step 2 — Ship a release, then flip the CTA
+### ~~Step 2 — Ship a release~~ ✅ done (v1.0.0)
 
-Right now the hero button says **"Star to follow development"** because there is no
-published release. Do not change this until a signed, notarised DMG actually exists
-at the URL — a Download button that 404s costs more trust than it earns.
+The hero CTA now points at `releases/latest/download/TaskManager.dmg`. GitHub resolves
+that to whatever the newest release is, so **the page never needs editing per release**
+— just keep the asset named exactly `TaskManager.dmg`.
 
-There is a `TaskManager.dmg` in the repo root, but it is **local and unsigned**. It
-is not a release.
+The DMG is **unsigned and un-notarised**; notarisation needs a paid Apple Developer
+account. The page, the README and the release notes all say so and tell users to
+right-click → Open. Do not quietly drop that caveat.
 
-When the first release is published, follow the comment in the `<div class="cta">`
-block: swap the button for the `releases/latest/download/TaskManager.dmg` permalink
-(it always resolves to the newest release, so the page never needs editing again per
-release) and delete the `<p class="note">` that says "No release yet".
+### ~~Step 3 — Enable GitHub Pages~~ ✅ done
 
-### Step 3 — Enable GitHub Pages
+Live at <https://yatindma.github.io/task-manager-for-mac/> (branch `main`, folder `/docs`).
 
-Repo **Settings → Pages → Source: "Deploy from a branch" → Branch: `main`, Folder:
-`/docs` → Save.** First build takes ~1 minute. It will publish at:
+⚠️ That URL is hardcoded in five places — see §2 below if the repo ever moves.
 
-```
-https://yatindma.github.io/task-manager-for-mac/
-```
-
-⚠️ **If that is not your final URL, it is hardcoded in five places** — see §2 below.
-
-### Step 4 — Set the repo About + topics
+### ~~Step 4 — Set the repo About + topics~~ ✅ done
 
 Per GitHub's own docs: when you search GitHub without an `in:` qualifier, **only the
 repo name, description, and topics are searched** — *not* the README. Those three
@@ -152,10 +143,8 @@ One command to find every one of them:
 grep -rn "yatindma" docs/
 ```
 
-⚠️ **`LICENSE` does not exist in the repo root yet.** The root `README.md` claims MIT
-and the JSON-LD links to a `LICENSE` file. Until you add one, both are pointing at a
-404 and the "free and open source" claim is unbacked. Add the file, or change the
-claim.
+`LICENSE` (MIT) exists in the repo root, so the README's claim and the JSON-LD link
+are both backed.
 
 ---
 
@@ -172,7 +161,6 @@ claim.
   there for humans and for AI-answer citation, which is why the answers are short,
   self-contained and quotable, with the real numbers (116 of ~620) in them.
 - **No `BreadcrumbList`.** A one-page site has no hierarchy to describe.
-- **No Download button.** See step 2.
 - **The limitations section is not spun as features.** Please keep it that way. A
   visitor who learns about the GPU column after installing feels lied to; one who
   reads it upfront trusts the rest of the page.
@@ -201,12 +189,12 @@ arrive inside 48 hours, and days 8–30 contribute approximately zero. **It fire
 
 That is not a reason to rush. It is the reason to be *completely finished* first:
 
-- [ ] Screenshots in (step 1)
-- [ ] Signed, notarised DMG published (step 2)
-- [ ] `LICENSE` file exists (§2)
-- [ ] Root `README.md` stands alone — most visitors never see this site
-- [ ] About + topics set (step 4)
-- [ ] Social preview set (step 5)
+- [ ] **Screenshots in (step 1)** — the only blocker left. Do not post without these.
+- [x] DMG published (step 2) — unsigned; notarisation is a separate call
+- [x] `LICENSE` file exists (§2)
+- [x] Root `README.md` stands alone — most visitors never see this site
+- [x] About + topics + website set (step 4)
+- [ ] Social preview set (step 5) — upload `og-image.png`, it's a UI-only step
 
 On timing: the 48-hour window is well-supported. The commonly-repeated "post Monday
 00:00 UTC" is a single blog analysis and timing effects are exactly where p-hacking
