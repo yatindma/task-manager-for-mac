@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What macOS does and doesn't expose about process resource usage</title>
+<meta name="description" content="Per-process GPU, startup impact, CPU affinity and metered network have no public macOS API. What proc_pidinfo hides without root, why mach absolute time is not nanoseconds, and how each gap was verified.">
+<link rel="canonical" href="https://yatindma.github.io/task-manager-for-mac/limitations.html">
+<link rel="icon" href="icon-128.png" type="image/png">
+
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://yatindma.github.io/task-manager-for-mac/limitations.html">
+<meta property="og:title" content="What macOS does and doesn't expose about process resource usage">
+<meta property="og:description" content="Per-process GPU, startup impact, CPU affinity and metered network have no public macOS API. The measured gaps, and how each was verified.">
+<meta property="og:image" content="https://yatindma.github.io/task-manager-for-mac/og-image.png">
+<meta property="og:image:width" content="2400">
+<meta property="og:image:height" content="1260">
+<meta property="og:image:alt" content="Task Manager for Mac — the Windows 11 Task Manager running natively on macOS.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="What macOS does and doesn't expose about process resource usage">
+<meta name="twitter:description" content="The process metrics macOS publishes no API for, and how each gap was verified.">
+<meta name="twitter:image" content="https://yatindma.github.io/task-manager-for-mac/og-image.png">
+
+<!-- TechArticle only. No FAQPage: Google retired the FAQ rich result for general
+     sites on 7 May 2026. No aggregateRating: there are no reviews to aggregate. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "What macOS does and doesn't expose about process resource usage",
+  "description": "Per-process GPU, startup impact, CPU affinity and metered network have no public macOS API. What proc_pidinfo hides without root, why mach absolute time is not nanoseconds, and how each gap was verified.",
+  "url": "https://yatindma.github.io/task-manager-for-mac/limitations.html",
+  "author": { "@type": "Person", "name": "Yatin Arora" },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yatindma.github.io/task-manager-for-mac/limitations.html"
+  },
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Task Manager for Mac",
+    "url": "https://yatindma.github.io/task-manager-for-mac/"
+  }
+}
+</script>
+
+<!-- Inlined in full: the site makes no external requests of any kind — no stylesheet,
+     no script, no web font. Values are copied from index.html so the two pages are one site. -->
+<style>
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f5f5f7;
+  --fg: #1d1d1f;
+  --fg-dim: #6e6e73;
+  --accent: #0071e3;
+  --line: #d2d2d7;
+  --radius: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --bg-alt: #101010;
+    --fg: #f5f5f7;
+    --fg-dim: #a1a1a6;
+    --accent: #4cc2ff;
+    --line: #29292b;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #ffffff; --bg-alt: #f5f5f7; --fg: #1d1d1f;
+  --fg-dim: #6e6e73; --accent: #0071e3; --line: #d2d2d7;
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --bg-alt: #101010; --fg: #f5f5f7;
+  --fg-dim: #a1a1a6; --accent: #4cc2ff; --line: #29292b;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 22px; }
+
+nav { padding: 34px 0 0; font-size: 13px; color: var(--fg-dim); }
+nav a { color: var(--fg-dim); text-decoration: underline; }
+
+.head { padding: 60px 0 0; }
+h1 {
+  margin: 0 0 16px;
+  font-size: clamp(34px, 5.4vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  max-width: 760px;
+}
+.sub {
+  margin: 0;
+  max-width: 660px;
+  font-size: clamp(19px, 2.4vw, 23px);
+  line-height: 1.35;
+  color: var(--fg-dim);
+  letter-spacing: -0.01em;
+}
+
+section { padding: 72px 0 0; }
+section + section { border-top: 1px solid var(--line); margin-top: 72px; }
+h2 {
+  margin: 0 0 18px;
+  font-size: clamp(26px, 3.2vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+h3 {
+  margin: 40px 0 12px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+p { max-width: 660px; color: var(--fg-dim); font-size: 17px; margin: 0 0 18px; }
+p strong, li strong { color: var(--fg); font-weight: 600; }
+p em { font-style: italic; }
+
+ul.plain { max-width: 660px; margin: 0 0 18px; padding-left: 22px; color: var(--fg-dim); font-size: 17px; }
+ul.plain li { padding: 5px 0; }
+
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; background: var(--bg-alt); padding: 2px 6px; border-radius: 5px; }
+/* The body must never scroll sideways — long sample output scrolls inside the block. */
+pre {
+  background: var(--bg-alt); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 20px; overflow-x: auto; font-size: 14px; max-width: 660px; margin: 0 0 18px;
+}
+pre code { background: none; padding: 0; white-space: pre; }
+
+footer {
+  border-top: 1px solid var(--line); margin-top: 96px;
+  padding: 40px 0 60px; font-size: 13px; color: var(--fg-dim); text-align: center;
+}
+footer a { color: var(--fg-dim); }
+footer p { margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<nav class="wrap"><a href="index.html">← Task Manager for Mac</a></nav>
+
+<main class="wrap">
+
+  <header class="head">
+    <h1>Honest limitations</h1>
+    <p class="sub">macOS is not Windows. Some of what Task Manager shows on Windows genuinely cannot be obtained here. Rather than invent those numbers, the app leaves them empty and says why.</p>
+    <p style="margin-top:18px">Everything on this page is a real constraint, not a missing feature waiting on a to-do list.</p>
+  </header>
+
+  <section id="per-process-gpu">
+    <h2>Per-process GPU is always 0</h2>
+    <p>macOS exposes no per-process GPU utilisation through any public API. Activity Monitor doesn't show it either — check for yourself.</p>
+    <p>Whole-GPU utilisation <strong>is</strong> real, read from each accelerator's <code>PerformanceStatistics</code> in the IORegistry, and the Performance tab's GPU graph is live. Only the per-row column in Processes stays at 0.</p>
+  </section>
+
+  <section id="system-processes">
+    <h2>System processes need a one-time password</h2>
+    <p>Unprivileged <code>proc_pidinfo</code> returns nothing for processes you don't own. On a typical Mac that hides roughly <strong>120 of ~620 processes</strong>, including <code>WindowServer</code> and <code>kernel_task</code>.</p>
+    <p>The app ships a small helper, <code>tmhelper</code>, <strong>unprivileged</strong>, and offers to install it setuid-root behind a single macOS authorisation prompt.</p>
+    <p><strong>You can decline.</strong> Everything else works; those processes just report as idle.</p>
+
+    <h3>What the helper actually does</h3>
+    <p>About 150 lines. Installed at <code>/Library/Application Support/TaskManager/tmhelper</code>, owned <code>root:wheel</code>, mode <code>4755</code>.</p>
+    <p>It answers exactly two questions:</p>
+    <ul class="plain">
+      <li><code>SAMPLE</code> — dump CPU/memory/disk/fd counts for every pid</li>
+      <li><code>KILL &lt;pid&gt; &lt;TERM|KILL|STOP|CONT&gt;</code> — signal one process</li>
+    </ul>
+    <p>It never execs anything. It never interprets a path. It rejects any signal outside that list, and it refuses to run at all unless the calling user is an admin — so the setuid bit alone doesn't let a standard user on a shared Mac touch root processes.</p>
+    <p>This is the same mechanism <code>/bin/ps</code> and <code>/usr/bin/top</code> have used for decades. Check:</p>
+<pre><code>$ ls -l /bin/ps
+-rwsr-xr-x  1 root  wheel  /bin/ps
+     ↑ that 's' is setuid</code></pre>
+    <p>Install once. The setuid bit lives on disk, so it survives reboots and app updates. You are never asked again.</p>
+  </section>
+
+  <section id="startup-impact">
+    <h2>Startup impact says "Not measured"</h2>
+    <p>Windows times how long each startup item takes. macOS measures nothing comparable and publishes no equivalent. The column exists for layout parity and is honest about being empty.</p>
+  </section>
+
+  <section id="set-affinity">
+    <h2>Set affinity is disabled</h2>
+    <p>Windows lets you pin a process to specific cores. macOS has no CPU affinity API at all — the scheduler owns that decision. The menu item is shown <strong>disabled with a tooltip</strong> rather than hidden, so you know it exists and why it can't work here.</p>
+  </section>
+
+  <section id="metered-network">
+    <h2>"Metered network" is always 0</h2>
+    <p>macOS offers no documented way to know whether the active interface is a metered hotspot or a cellular link. Guessing from the interface name would be a fabrication.</p>
+  </section>
+
+  <section id="app-history">
+    <h2>App history starts when you first run the app</h2>
+    <p>Windows reads this from a long-running system metering service. macOS keeps no such ledger, so the app integrates its own samples and persists them to <code>~/Library/Application Support/TaskManager/app-history.json</code>.</p>
+    <p>History therefore begins at first launch, and gaps while the app was closed are skipped rather than interpolated.</p>
+  </section>
+
+  <section id="services-no-pid">
+    <h2>Some services show no PID</h2>
+    <p><code>launchctl list</code> only reports the caller's domain. System daemons that launchd won't disclose to an unprivileged caller are still listed — sourced from their plists — with no PID. Windows would show these as "Stopped", and so does this.</p>
+  </section>
+
+  <section id="last-bios-time">
+    <h2>"Last BIOS time" is boot time instead</h2>
+    <p>Macs have no BIOS and publish no firmware hand-off duration. The closest honest figure is when the kernel booted, so that's what's shown, relabelled.</p>
+  </section>
+
+  <section id="handles">
+    <h2>Handles are file descriptors</h2>
+    <p>macOS has no equivalent of a Windows handle. The open file-descriptor count (<code>PROC_PIDLISTFDS</code>) is the honest analogue, and it's what the column reports.</p>
+  </section>
+
+  <section id="not-notarized">
+    <h2>Not notarized</h2>
+    <p><code>build.sh</code> ad-hoc signs the bundle. That's enough to give macOS a stable identity to attach permission grants to, so you aren't re-prompted on every launch — but it is not a distributable Developer ID signature, which costs $99/year.</p>
+    <p>This is why macOS shows "could not verify" on first launch, and why you right-click → Open once.</p>
+  </section>
+
+  <section id="things-that-bit-us">
+    <h2>Things that bit us</h2>
+
+    <h3>The mach timebase</h3>
+    <p><code>proc_taskinfo</code>'s CPU totals are in <strong>mach absolute time units, not nanoseconds</strong> — despite essentially every source online saying nanoseconds.</p>
+    <p>The distinction is invisible on Intel, where the timebase is 1:1. On Apple Silicon it's <strong>125/3 ≈ 41.67</strong>.</p>
+    <p>Without the conversion, a process pinning a full core reports <strong>2.4% CPU</strong>. The whole Processes tab read zero and looked plausible while doing it. Caught by pinning a core with a <code>while True: pass</code> loop and comparing against <code>ps</code>.</p>
+<pre><code>burner at 99.9% (per ps)
+raw delta: 47,928,786 units over 2.01s
+  as nanoseconds → 2.4%    ✗
+  × 125/3        → 99.4%   ✓</code></pre>
+
+    <h3>CPU normalisation</h3>
+    <p>Windows normalises CPU across all cores, so the column maxes at 100%. Activity Monitor does not — it reports per-core, so a busy process can read 800% on an 8-core Mac.</p>
+    <p>This app follows <strong>Windows</strong>. If a number here disagrees with Activity Monitor by roughly your core count, that's why, and it's deliberate.</p>
+
+    <h3>Fixed-width columns</h3>
+    <p>Every table is an <code>HStack</code> of fixed-width columns, matching the Windows layout exactly. Fixed-width columns cannot shrink — so at the default 1024pt window the table wanted 932pt against a content pane of ~814pt, and the whole layout slid sideways, pushing the sidebar off the left edge. Tables now scroll horizontally instead, as Windows does.</p>
+
+    <h3>Hang detection</h3>
+    <p><code>NSRunningApplication.isResponsive</code> is not public API — Activity Monitor uses a private CoreGraphics call. "Not responding" is instead inferred from an Accessibility probe with a short timeout.</p>
+    <p>A process that <em>cannot</em> answer (sandboxed, say) means <strong>we cannot tell</strong> — which is deliberately not treated as "not responding".</p>
+
+    <h3>APFS hides the physical disk</h3>
+    <p>The root mount reports <code>disk3s3s1</code>, a synthesized APFS container. The physical disk is <code>disk0</code>. Neither a volume-name comparison nor a <code>/dev/</code> prefix test bridges that, and a depth-first IORegistry walk stops at the synthesized media. Resolving it needs a breadth-first walk over <em>all</em> parents:</p>
+<pre><code>disk3s3s1 → disk3s3 → AppleAPFSContainer → AppleAPFSMedia(disk3)
+          → AppleAPFSContainerScheme → disk0s2 → IOGUIDPartitionScheme → disk0 ✓</code></pre>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>MIT licensed · <a href="https://github.com/yatindma/task-manager-for-mac">GitHub</a> · <a href="https://github.com/yatindma/task-manager-for-mac/issues">Report an issue</a></p>
+  <p>Not affiliated with Microsoft or Apple.</p>
+</footer>
+
+</body>
+</html>

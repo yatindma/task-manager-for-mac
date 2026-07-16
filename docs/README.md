@@ -98,30 +98,29 @@ SEO is a 6–18 month compounding play.
 **Do not bother with IndexNow** for Google — Bing supports it fully, Google's adoption
 is partial at best.
 
-### Step 7 — Promote `limitations.md` to a real HTML page (recommended)
+### ~~Step 7 — Promote `limitations.md` to a real HTML page~~ ✅ done
 
-`docs/limitations.md` currently has **no Jekyll front matter**, so Pages serves it as
-raw text rather than rendering it. For that reason the page links to the
-GitHub-rendered copy instead, and its `sitemap.xml` entry is commented out.
+`limitations.html` is now a hand-written, self-contained page (same approach as
+`index.html` — no Jekyll front matter, no layout, no theme). `index.html` links to it and
+`sitemap.xml` lists it.
 
-This is worth fixing properly, because that document is plausibly your single most
-valuable SEO/GEO asset: nobody has written the definitive "what macOS does and does
-not expose about process resource usage" page. It answers questions that have nothing
-to do with your app, which is exactly the kind of page that earns links and gets
-quoted by AI assistants — and it exists *because* you were honest.
+It is plausibly the single most valuable SEO/GEO asset here: nobody has written the
+definitive "what macOS does and does not expose about process resource usage" page. It
+answers questions that have nothing to do with this app, which is exactly the kind of
+page that earns links and gets quoted by AI assistants — and it exists *because* the
+project was honest.
 
-To fix: add front matter to `docs/limitations.md`
+⚠️ **The content now exists twice, and the two copies will drift.**
 
-```yaml
----
-title: What macOS does and doesn't expose about process resource usage
-description: The real constraints behind per-process GPU, root-owned processes, handles, and startup impact on macOS.
----
-```
+| Copy | Who reads it |
+|:--|:--|
+| `docs/limitations.md` | GitHub — linked from the root `README.md` (×2) and `CONTRIBUTING.md`, renders natively on github.com |
+| `docs/limitations.html` | The Pages site — linked from `index.html`, listed in `sitemap.xml` |
 
-then in `index.html` change the limitations link `href` to `limitations.html`, and
-uncomment the `<url>` block in `sitemap.xml`. Doing the last two **before** the first
-creates a 404 in your sitemap — order matters.
+There is no build step generating one from the other, and adding one for a single
+document would cost more than it saves. So the rule is manual and simple: **edit the
+`.md`, then mirror the change into the `.html`.** If they ever disagree, the `.md` is
+the source of truth — the numbers in it were the ones verified against the machine.
 
 ---
 

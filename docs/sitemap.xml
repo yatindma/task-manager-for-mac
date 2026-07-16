@@ -4,13 +4,8 @@
     <loc>https://yatindma.github.io/task-manager-for-mac/</loc>
     <lastmod>2026-07-16</lastmod>
   </url>
-  <!-- Uncomment ONLY after adding Jekyll front matter to docs/limitations.md so it
-       actually renders at this URL. Listing a 404 in a sitemap is worse than
-       omitting it. See docs/README.md step 7. -->
-  <!--
   <url>
     <loc>https://yatindma.github.io/task-manager-for-mac/limitations.html</loc>
     <lastmod>2026-07-16</lastmod>
   </url>
-  -->
 </urlset>
