@@ -12,12 +12,7 @@
 
 </div>
 
-<!-- TODO(screenshot): the single most important thing on this page.
-     Capture the Processes tab sorted by CPU with the heatmap visible — the shot
-     that makes the "wait, that's a Mac?" point instantly. 1600px wide or more.
-     Save to docs/screenshot-processes.png, then replace this comment with:
-         ![Task Manager on macOS](docs/screenshot-processes.png)
-     Nothing is linked yet on purpose: a broken image is worse than none. -->
+![Task Manager on macOS — the Processes tab sorted by CPU, with the heatmap running yellow to red](docs/screenshot-processes.png)
 
 <br>
 

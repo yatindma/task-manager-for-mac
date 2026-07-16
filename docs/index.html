@@ -121,11 +121,7 @@ h1 {
   overflow: hidden;
   background: var(--bg-alt);
 }
-.shot-placeholder {
-  aspect-ratio: 1024 / 700;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--fg-dim); font-size: 14px; text-align: center; padding: 20px;
-}
+.shot-frame img { display: block; width: 100%; height: auto; }
 
 section { padding: 96px 0 0; }
 section + section { border-top: 1px solid var(--line); margin-top: 96px; }
@@ -195,12 +191,8 @@ footer p { margin: 6px 0; }
 
     <div class="shot">
       <div class="shot-frame">
-        <!-- TODO(screenshot): replace this entire .shot-placeholder div with:
-             <img src="screenshot-processes.png" width="2048" height="1400"
-                  alt="Task Manager on macOS showing the Processes tab, CPU and Memory columns heat-mapped yellow to red.">
-             Capture the Processes tab sorted by CPU with several apps running so the
-             heatmap is visible. A 1024x700 window on a Retina display is 2048x1400. -->
-        <div class="shot-placeholder">Screenshot of the Processes tab goes here</div>
+        <img src="screenshot-processes.png" width="2580" height="1720"
+             alt="Task Manager on macOS showing the Processes tab sorted by CPU, with the CPU and Memory columns heat-mapped yellow to red.">
       </div>
     </div>
   </div>

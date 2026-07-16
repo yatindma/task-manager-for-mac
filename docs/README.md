@@ -189,7 +189,7 @@ arrive inside 48 hours, and days 8–30 contribute approximately zero. **It fire
 
 That is not a reason to rush. It is the reason to be *completely finished* first:
 
-- [ ] **Screenshots in (step 1)** — the only blocker left. Do not post without these.
+- [x] Hero screenshot in (step 1) — `screenshot-processes.png`. The other three are still placeholders.
 - [x] DMG published (step 2) — unsigned; notarisation is a separate call
 - [x] `LICENSE` file exists (§2)
 - [x] Root `README.md` stands alone — most visitors never see this site
