@@ -13,3 +13,8 @@ include:
 exclude:
   - README.md
   - style.css.example
+  # Jekyll converts any .md it sees into a .html of the same name — which silently
+  # overwrote the hand-written limitations.html with an unstyled, title-less dump of
+  # the markdown. The .md stays in the repo for GitHub (the README and CONTRIBUTING
+  # link to it); the site serves the real page instead.
+  - limitations.md
