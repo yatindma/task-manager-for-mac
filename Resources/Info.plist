@@ -2,33 +2,31 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>Task Manager</string>
 	<key>CFBundleDisplayName</key>
 	<string>Task Manager</string>
-	<key>CFBundleIdentifier</key>
-	<string>com.local.taskmanager</string>
 	<key>CFBundleExecutable</key>
 	<string>TaskManager</string>
 	<key>CFBundleIconFile</key>
 	<string>Icon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.local.taskmanager</string>
+	<key>CFBundleName</key>
+	<string>Task Manager</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>1.0.1</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>14.0</string>
-	<key>NSHighResolutionCapable</key>
-	<true/>
-	<!-- Reading other processes' names, paths and icons is what the Processes tab is. -->
-	<key>NSDesktopFolderUsageDescription</key>
-	<string>Task Manager reads process executable paths to display them.</string>
-	<!-- The Startup apps tab toggles login items through System Events. -->
-	<key>NSAppleEventsUsageDescription</key>
-	<string>Task Manager uses System Events to read and toggle your login items.</string>
+	<string>2</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Task Manager uses System Events to read and toggle your login items.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Task Manager reads process executable paths to display them.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 </dict>
 </plist>

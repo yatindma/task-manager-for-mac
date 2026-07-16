@@ -1,6 +1,6 @@
 #!/bin/bash
 # Assembles Task Manager.app from the SwiftPM executables.
-# Xcode is not required — only the Command Line Tools.
+# Usage: ./build.sh [debug|release]   (release is universal; see ARCHS below)
 set -euo pipefail
 
 CONFIG="${1:-release}"
@@ -14,8 +14,16 @@ if [ -z "${DEVELOPER_DIR:-}" ] && [ -d /Applications/Xcode.app ]; then
     export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 
-swift build -c "$CONFIG" --package-path "$ROOT"
-BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" --show-bin-path)"
+# A release ships to both architectures, because the README and the site both promise
+# Intel. A debug build stays native — cross-compiling doubles the build for no gain
+# on the machine doing the building.
+ARCHS=()
+if [ "$CONFIG" = release ]; then
+    ARCHS=(--arch arm64 --arch x86_64)
+fi
+
+swift build -c "$CONFIG" --package-path "$ROOT" "${ARCHS[@]}"
+BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" "${ARCHS[@]}" --show-bin-path)"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
