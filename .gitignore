@@ -1,0 +1,16 @@
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Build output
+Task Manager.app/
+*.dmg
+Resources/Icon.icns
+*.iconset/
+
+# Audit scratch
+.audit/
+
+# macOS
+.DS_Store

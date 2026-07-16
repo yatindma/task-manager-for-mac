@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Task Manager}",
+            "name": "Debug tmhelper",
+            "target": "tmhelper",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug tmhelper"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Task Manager}",
+            "name": "Release tmhelper",
+            "target": "tmhelper",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release tmhelper"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Task Manager}",
+            "name": "Debug TaskManager",
+            "target": "TaskManager",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TaskManager"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Task Manager}",
+            "name": "Release TaskManager",
+            "target": "TaskManager",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TaskManager"
+        }
+    ]
+}

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yatindma.github.io/task-manager-for-mac/sitemap.xml

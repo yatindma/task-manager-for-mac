@@ -1,0 +1,15 @@
+# GitHub Pages config for the /docs folder.
+#
+# There is no Jekyll theme here on purpose: index.html is a complete, self-contained
+# static page with inlined CSS. Jekyll must not wrap it, and must not try to render
+# README.md (the maintainer note) as a page.
+
+theme: null
+plugins: []
+
+include:
+  - robots.txt
+
+exclude:
+  - README.md
+  - style.css.example
