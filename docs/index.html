@@ -4,498 +4,276 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Task Manager for Mac — the Windows 11 Task Manager, on macOS</title>
-<meta name="description" content="The Windows 11 Task Manager, rebuilt for macOS: all seven tabs, the load heatmap, live CPU and memory graphs. Native Swift 6, free and open source.">
+<meta name="description" content="The Windows 11 Task Manager, running natively on macOS. All seven tabs, the heatmap, live CPU, memory, disk and network graphs. Free, open source, no dependencies.">
 <link rel="canonical" href="https://yatindma.github.io/task-manager-for-mac/">
-<meta name="theme-color" content="#0078D4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#202020" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon-128.png" type="image/png">
-<link rel="apple-touch-icon" href="icon-128.png">
 
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Task Manager for Mac">
-<meta property="og:title" content="Task Manager for Mac — the Windows 11 Task Manager, on macOS">
-<meta property="og:description" content="A pixel-exact clone of the Windows 11 Task Manager for macOS. All seven tabs, the heatmap, live graphs. Native Swift 6 + SwiftUI, zero dependencies, free and open source.">
 <meta property="og:url" content="https://yatindma.github.io/task-manager-for-mac/">
-<!-- og-image.png is 2400x1260 — a 2x export of the 1200x630 OG slot. The declared
-     dimensions must match the real pixels of the file, so they say 2400x1260. -->
+<meta property="og:title" content="Task Manager for Mac">
+<meta property="og:description" content="The Windows 11 Task Manager, on your Mac. All seven tabs, the heatmap, live graphs. Free and open source.">
 <meta property="og:image" content="https://yatindma.github.io/task-manager-for-mac/og-image.png">
-<meta property="og:image:width" content="2400">
-<meta property="og:image:height" content="1260">
-<meta property="og:image:alt" content="Task Manager for Mac showing the Processes tab with the Windows heatmap.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Task Manager for Mac — the Windows 11 Task Manager, on macOS">
-<meta name="twitter:description" content="A pixel-exact clone of the Windows 11 Task Manager for macOS. Native Swift 6 + SwiftUI, zero dependencies, free and open source.">
+<meta name="twitter:title" content="Task Manager for Mac">
+<meta name="twitter:description" content="The Windows 11 Task Manager, on your Mac.">
 <meta name="twitter:image" content="https://yatindma.github.io/task-manager-for-mac/og-image.png">
 
-<style>
-/* Palette lifted from Sources/TaskManager/Theme/WinTheme.swift — the app is the
-   source of truth for every colour below. Light values first, dark in the media
-   query, exactly as WinTheme.Duo defines them. */
-:root{
-  --mica:#F3F3F3; --card:#FBFBFB; --border:#E5E5E5; --header:#F9F9F9;
-  --text:#1B1B1B; --text-2:#5D5D5D;
-  --accent:#0078D4; --accent-ink:#fff;
-  --row-hover:#F0F0F0; --row-sel:#E1EFFA; --grid:#D6D6D6;
-  --cpu:#0078D4; --mem:#8764B8; --disk:#107C10;
-  --heat-0:#FEFBE8; --heat-1:#FCF3CF; --heat-2:#FAD7A0; --heat-3:#F1948A;
-  --shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
-  --radius:8px;
-}
-@media (prefers-color-scheme:dark){
-  :root{
-    --mica:#202020; --card:#2C2C2C; --border:#3A3A3A; --header:#272727;
-    --text:#FFFFFF; --text-2:#C5C5C5;
-    --accent:#4CC2FF; --accent-ink:#0A1A22;
-    --row-hover:#383838; --row-sel:#33404A; --grid:#3F3F3F;
-    --cpu:#4CC2FF; --mem:#B393E0; --disk:#4CD964;
-    --heat-0:#3A3620; --heat-1:#4D4526; --heat-2:#5C3A2A; --heat-3:#6B2C2C;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.45);
-  }
-}
-
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{
-  margin:0; background:var(--mica); color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
-  font-size:16px; line-height:1.6; overflow-x:hidden;
-  -webkit-font-smoothing:antialiased;
-}
-img{max-width:100%; height:auto; display:block}
-a{color:var(--accent)}
-a:focus-visible,button:focus-visible,summary:focus-visible{
-  outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;
-}
-:target{scroll-margin-top:80px}
-.wrap{max-width:1080px; margin:0 auto; padding:0 20px}
-.skip{position:absolute; left:-9999px; top:0}
-.skip:focus{left:8px; top:8px; z-index:99; background:var(--card); color:var(--text);
-  padding:10px 14px; border-radius:6px; border:1px solid var(--border)}
-
-/* ---- nav ---- */
-.nav{border-bottom:1px solid var(--border); background:var(--mica); position:sticky; top:0; z-index:10}
-.nav .wrap{display:flex; align-items:center; gap:22px; height:56px}
-.brand{display:flex; align-items:center; gap:10px; font-weight:600; color:var(--text); text-decoration:none; margin-right:auto}
-.brand img{border-radius:6px}
-.nav a.link{color:var(--text-2); text-decoration:none; font-size:14px}
-.nav a.link:hover{color:var(--text)}
-@media (max-width:640px){ .nav a.link.opt{display:none} }
-
-/* ---- hero ---- */
-.hero{padding:64px 0 28px; text-align:center}
-h1{font-size:clamp(2.4rem,6vw,3.6rem); line-height:1.1; margin:0 0 12px; letter-spacing:-.02em; font-weight:650}
-.sub{font-size:clamp(1.05rem,2.4vw,1.3rem); color:var(--text-2); margin:0 auto 28px; max-width:40ch}
-.cta{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px}
-.btn{
-  display:inline-block; padding:12px 22px; border-radius:6px; font-size:15px; font-weight:600;
-  text-decoration:none; border:1px solid transparent; transition:filter .12s,background .12s;
-}
-.btn-primary{background:var(--accent); color:var(--accent-ink)}
-.btn-primary:hover{filter:brightness(1.08)}
-.btn-secondary{background:var(--card); color:var(--text); border-color:var(--border)}
-.btn-secondary:hover{background:var(--row-hover)}
-.trust{font-size:13.5px; color:var(--text-2); margin:0}
-.note{font-size:13px; color:var(--text-2); margin:14px auto 0; max-width:56ch}
-
-/* ---- screenshot frame ---- */
-figure{margin:0}
-.shot{
-  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
-  box-shadow:var(--shadow); overflow:hidden;
-}
-.shot-scroll{overflow-x:auto}
-.ph{
-  aspect-ratio:16/10; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:8px; text-align:center; padding:24px; background:
-    repeating-linear-gradient(45deg,transparent 0 10px,var(--row-hover) 10px 20px);
-  color:var(--text-2); font-size:13px;
-}
-.ph strong{color:var(--text); font-weight:600; font-size:15px}
-.ph code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px}
-figcaption{font-size:13px; color:var(--text-2); margin-top:10px; text-align:center}
-
-/* ---- demo table (CSS only, no JS, no images) ---- */
-.demo{border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--card); box-shadow:var(--shadow)}
-.demo-bar{display:flex; align-items:center; gap:8px; height:34px; padding:0 12px; background:var(--header); border-bottom:1px solid var(--border); font-size:12px; color:var(--text-2)}
-.dot{width:11px; height:11px; border-radius:50%; background:var(--grid)}
-.demo-scroll{overflow-x:auto}
-table{border-collapse:collapse; width:100%; min-width:620px; font-size:12px}
-caption{text-align:left; padding:10px 12px; font-size:12px; color:var(--text-2); caption-side:bottom}
-th,td{padding:0 8px; height:28px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--border); font-weight:400}
-th{background:var(--header); color:var(--text-2); position:sticky; top:0; font-size:12px}
-th:first-child,td:first-child{text-align:left; width:38%}
-tbody tr:hover{background:var(--row-hover)}
-tbody tr.sel{background:var(--row-sel)}
-.h1c{background:var(--heat-1)} .h2c{background:var(--heat-2)} .h3c{background:var(--heat-3)} .h0c{background:var(--heat-0)}
-@media (prefers-color-scheme:light){ .h3c{color:#5B1A14} }
-
-/* ---- sections ---- */
-section{padding:56px 0}
-h2{font-size:clamp(1.5rem,3.4vw,2rem); margin:0 0 10px; letter-spacing:-.01em; font-weight:640}
-h3{font-size:1.05rem; margin:0 0 6px; font-weight:600}
-.lede{color:var(--text-2); margin:0 0 28px; max-width:62ch}
-.feature{display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:center; margin-bottom:44px}
-.feature:nth-child(even) .feature-text{order:2}
-.feature p{color:var(--text-2); margin:0}
-@media (max-width:820px){ .feature{grid-template-columns:1fr; gap:18px} .feature:nth-child(even) .feature-text{order:0} }
-
-.panel{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px}
-.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px}
-
-/* ---- limitations ---- */
-.lim{border-left:3px solid var(--accent); padding-left:16px; margin:0 0 22px}
-.lim h3{margin-bottom:4px}
-.lim p{margin:0; color:var(--text-2); font-size:15px}
-
-/* ---- faq ---- */
-details{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px}
-summary{padding:14px 16px; cursor:pointer; font-weight:600; font-size:15.5px; list-style:none}
-summary::-webkit-details-marker{display:none}
-summary::after{content:"+"; float:right; color:var(--text-2); font-weight:400}
-details[open] summary::after{content:"−"}
-details[open] summary{border-bottom:1px solid var(--border)}
-details .body{padding:14px 16px; color:var(--text-2); font-size:15px}
-details .body p{margin:0 0 10px} details .body p:last-child{margin:0}
-
-pre{background:var(--header); border:1px solid var(--border); border-radius:6px; padding:14px 16px; overflow-x:auto; font-size:13px; line-height:1.6}
-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-kbd{font-family:inherit; font-size:.85em; background:var(--header); border:1px solid var(--border);
-  border-bottom-width:2px; border-radius:4px; padding:1px 5px; color:var(--text)}
-
-footer{border-top:1px solid var(--border); padding:32px 0 48px; color:var(--text-2); font-size:14px}
-footer .wrap{display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:space-between}
-footer nav{display:flex; gap:16px; flex-wrap:wrap}
-@media (prefers-reduced-motion:reduce){ *{transition:none!important; scroll-behavior:auto!important} }
-</style>
-</head>
-<body>
-<a class="skip" href="#main">Skip to content</a>
-
-<header class="nav">
-  <div class="wrap">
-    <a class="brand" href="#main">
-      <img src="icon-128.png" width="24" height="24" alt="" decoding="async">
-      Task Manager for Mac
-    </a>
-    <a class="link opt" href="#features">Features</a>
-    <a class="link opt" href="#activity-monitor">vs Activity Monitor</a>
-    <a class="link opt" href="#limitations">Limitations</a>
-    <a class="link" href="#faq">FAQ</a>
-    <a class="link" href="https://github.com/yatindma/task-manager-for-mac">GitHub</a>
-  </div>
-</header>
-
-<main id="main">
-
-  <!-- HERO. Rectangle's pattern: name, one flat descriptive sentence, CTA, trust line. -->
-  <div class="hero">
-    <div class="wrap">
-      <h1>Task Manager for Mac</h1>
-      <p class="sub">A pixel-exact clone of the Windows 11 Task Manager, built natively for macOS.</p>
-      <div class="cta">
-        <!-- HONEST CTA. There is no published release yet, so there is deliberately
-             no Download button — a 404 is worse than an honest "star to follow".
-             WHEN THE FIRST DMG SHIPS, replace the "Star to follow development"
-             button below with this never-stale permalink, and demote the
-             "Build from source" button to .btn-secondary (it already is):
-               <a class="btn btn-primary"
-                  href="https://github.com/yatindma/task-manager-for-mac/releases/latest/download/TaskManager.dmg">Download for macOS</a>
-             The /releases/latest/download/ form always resolves to the newest
-             release, so this page never needs editing again per release.
-             Also delete the "No release yet" <p class="note"> below. -->
-        <a class="btn btn-primary" href="https://github.com/yatindma/task-manager-for-mac">Star to follow development</a>
-        <a class="btn btn-secondary" href="#build">Build from source</a>
-      </div>
-      <p class="trust">Free and Open Source, Supports macOS 14+, Intel and Apple Silicon</p>
-      <p class="note">No release yet — there is no DMG to download today. The source builds in one command, and starring the repo is how you'll hear about the first release.</p>
-    </div>
-  </div>
-
-  <!-- ABOVE THE FOLD IMAGE. The whole pitch is a visual claim, so the screenshot
-       carries it. Until the PNG exists, the placeholder below reserves the exact
-       same 16:10 box, so swapping it in causes zero layout shift.
-
-       TODO(maintainer) — capture and save to docs/screenshot-processes.png:
-         Processes tab, dark mode, sorted by CPU descending, heatmap clearly
-         visible (a few yellow/orange/red cells), sidebar expanded, window
-         1600x1000 logical px → export @2x = 3200x2000, then downscale to
-         1600x1000 for the file. Then replace the <div class="ph"> below with:
-         <img src="screenshot-processes.png" width="1600" height="1000"
-              alt="Task Manager for Mac on the Processes tab, processes sorted by CPU with the Windows heatmap tinting the busiest cells orange and red."
-              fetchpriority="high" decoding="async"> -->
-  <div class="wrap">
-    <figure class="shot shot-scroll">
-      <div class="ph">
-        <strong>Screenshot: Processes tab</strong>
-        <span>Add <code>docs/screenshot-processes.png</code> — 1600&times;1000</span>
-      </div>
-    </figure>
-  </div>
-
-  <section id="features">
-    <div class="wrap">
-      <h2>It is the Windows Task Manager, not a tribute to it</h2>
-      <p class="lede">Same seven tabs. Same column order. Same heatmap. Same <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Esc</kbd> muscle memory. Written from scratch in Swift 6 and SwiftUI, reading macOS's own kernel APIs — nothing is emulated and nothing is wrapped.</p>
-
-      <div class="feature">
-        <div class="feature-text">
-          <h3>The heatmap, cell for cell</h3>
-          <p>Windows tints each cell yellow through orange to red as load rises. So does this — the same four-stop gradient, driven by real <code>host_processor_info</code> and <code>proc_pid_rusage</code> samples. You find the busy process by looking, not by reading.</p>
-        </div>
-        <!-- Live CSS reproduction of the real table. Uses the exact heat stops from
-             WinTheme.heat(). No JS, no image, no layout shift, and it is honest:
-             these are illustrative values, as the caption says. -->
-        <div class="demo">
-          <div class="demo-bar" aria-hidden="true"><span class="dot"></span> Processes</div>
-          <div class="demo-scroll">
-            <table>
-              <caption>Illustration of the heatmap, using the app's real colour stops. Not live data.</caption>
-              <thead>
-                <tr><th scope="col">Name</th><th scope="col">CPU</th><th scope="col">Memory</th><th scope="col">Disk</th><th scope="col">Network</th></tr>
-              </thead>
-              <tbody>
-                <tr class="sel"><td>kernel_task</td><td class="h3c">64%</td><td class="h1c">1.9 GB</td><td class="h0c">0.4 MB/s</td><td>0 MB/s</td></tr>
-                <tr><td>WindowServer</td><td class="h2c">31%</td><td class="h1c">1.2 GB</td><td class="h0c">0.1 MB/s</td><td>0 MB/s</td></tr>
-                <tr><td>Google Chrome Helper (GPU)</td><td class="h1c">12%</td><td class="h2c">2.4 GB</td><td>0 MB/s</td><td class="h1c">1.4 MB/s</td></tr>
-                <tr><td>Xcode</td><td class="h1c">9.3%</td><td class="h3c">4.8 GB</td><td class="h2c">22.1 MB/s</td><td>0 MB/s</td></tr>
-                <tr><td>mds_stores</td><td class="h0c">3.1%</td><td>412.3 MB</td><td class="h1c">6.8 MB/s</td><td>0 MB/s</td></tr>
-                <tr><td>Finder</td><td>0%</td><td>96.4 MB</td><td>0 MB/s</td><td>0 MB/s</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="feature">
-        <div class="feature-text">
-          <h3>Live graphs on the Windows grid</h3>
-          <p>CPU, memory, disk, network and system-wide GPU, drawn on the same scrolling 60-second grid, in the same colours — CPU blue, memory purple, disk green. Utilisation, speed, processes, threads, handles and uptime, laid out where your eyes already look for them.</p>
-        </div>
-        <!-- TODO(maintainer): docs/screenshot-performance.png — Performance tab, dark,
-             CPU pane selected, graph mid-scroll with real activity (run a build first
-             so the line isn't flat). 1600x1000. Replace the placeholder with an <img>
-             carrying width="1600" height="1000" and honest alt text. -->
-        <figure class="shot">
-          <div class="ph">
-            <strong>Screenshot: Performance tab</strong>
-            <span>Add <code>docs/screenshot-performance.png</code> — 1600&times;1000</span>
-          </div>
-        </figure>
-      </div>
-
-      <div class="feature">
-        <div class="feature-text">
-          <h3>End task. End process tree. Suspend. Resume.</h3>
-          <p>Right-click any row and get the menu you expect. End process tree walks the real parent/child graph and takes the children with it. Suspend and resume are <code>SIGSTOP</code> and <code>SIGCONT</code> — the thing Activity Monitor won't give you a button for.</p>
-        </div>
-        <!-- TODO(maintainer): docs/screenshot-details.png — Details tab, dark, with the
-             right-click context menu open over a row showing End task / End process tree /
-             Suspend / Resume. 1600x1000. -->
-        <figure class="shot">
-          <div class="ph">
-            <strong>Screenshot: Details tab, context menu open</strong>
-            <span>Add <code>docs/screenshot-details.png</code> — 1600&times;1000</span>
-          </div>
-        </figure>
-      </div>
-
-      <div class="feature">
-        <div class="feature-text">
-          <h3>All seven tabs, including the boring ones</h3>
-          <p>Processes, Performance, App history, Startup apps, Users, Details, Services. Startup apps reads your real login items and launch agents. Services reads <code>launchd</code>. The tabs nobody clones are the ones you miss at 2am.</p>
-        </div>
-        <!-- TODO(maintainer): docs/screenshot-startup.png — Startup apps tab, dark,
-             several real login items listed. 1600x1000. -->
-        <figure class="shot">
-          <div class="ph">
-            <strong>Screenshot: Startup apps tab</strong>
-            <span>Add <code>docs/screenshot-startup.png</code> — 1600&times;1000</span>
-          </div>
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- Rectangle puts its Spectacle-migration message mid-page, in a flat voice.
-       Same placement, same voice. Never in the hero. -->
-  <section id="activity-monitor">
-    <div class="wrap">
-      <h2>Coming from Activity Monitor</h2>
-      <p class="lede">Activity Monitor is a good tool. It is not the tool you have trained on for years. Both read the same kernel, so the numbers agree; the difference is layout, density and vocabulary — which is exactly what muscle memory is made of. If what you want is the Windows Task Manager on a Mac, this is a like-for-like replacement rather than an alternative you have to relearn.</p>
-      <div class="grid2">
-        <div class="panel">
-          <h3>What you get here</h3>
-          <p style="color:var(--text-2);margin:0">The Windows tab order and column order. The load heatmap. Grouped processes with expandable trees. End process tree, suspend and resume in the right-click menu. The 60-second graph grid. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Esc</kbd> to open it.</p>
-        </div>
-        <div class="panel">
-          <h3>What Activity Monitor still does better</h3>
-          <p style="color:var(--text-2);margin:0">It's signed by Apple and already installed. It has the Energy tab and per-process GPU-adjacent power figures. It ships sampling and spindump integration. If you only ever use a Mac, it is probably the right tool and this project has nothing to sell you.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- LIMITATIONS. Stated plainly, not spun. This section exists because a visitor
-       who discovers these after installing feels lied to. -->
-  <section id="limitations">
-    <div class="wrap">
-      <h2>What it can't do, and why</h2>
-      <p class="lede">macOS does not expose everything Windows exposes. Where a number cannot be obtained honestly, the app shows zero rather than an estimate dressed up as a measurement. These are the five gaps, in full.</p>
-
-      <div class="lim">
-        <h3>Per-process GPU usage always reads 0%</h3>
-        <p>macOS publishes no public API for per-process GPU utilisation. There is no private workaround this project is willing to ship. The system-wide GPU graph on the Performance tab works correctly; the per-process column does not, and reads 0 for every process.</p>
-      </div>
-      <div class="lim">
-        <h3>Root-owned processes need a helper, or they report 0% CPU</h3>
-        <p>Reading CPU time for a process owned by another user requires elevated privileges. The app installs a small setuid helper on demand, behind a single macOS authorisation prompt. Decline it and everything else still works — but roughly 116 of about 620 processes on a typical Mac, including <code>kernel_task</code> and <code>WindowServer</code>, will report 0% CPU.</p>
-      </div>
-      <div class="lim">
-        <h3>"Handles" is a file-descriptor count</h3>
-        <p>macOS has no equivalent of the Windows handle. The Handles column shows the open file-descriptor count, which is the closest true analogue. It is not the same number Windows would show, and it isn't pretending to be.</p>
-      </div>
-      <div class="lim">
-        <h3>Startup impact is blank</h3>
-        <p>Windows measures the cost of each startup item. macOS measures nothing comparable, and the column has no honest value to display.</p>
-      </div>
-      <div class="lim">
-        <h3>Set affinity isn't there</h3>
-        <p>macOS provides no API to pin a process to specific cores. The scheduler does not expose that control to userspace, so the menu item does not exist.</p>
-      </div>
-
-      <!-- TODO(maintainer): this points at the GitHub-rendered copy because
-           docs/limitations.md has no Jekyll front matter and would otherwise be
-           served as raw text. Add front matter to it, then change this href to
-           "limitations.html" and uncomment its entry in sitemap.xml. See
-           docs/README.md step 7 — this is the page most likely to earn links. -->
-      <p style="margin:28px 0 0"><a href="https://github.com/yatindma/task-manager-for-mac/blob/main/docs/limitations.md">Read the full write-up on what macOS does and doesn't expose about process resource usage &rarr;</a></p>
-    </div>
-  </section>
-
-  <section id="build">
-    <div class="wrap">
-      <h2>Build it today</h2>
-      <p class="lede">There is no signed release yet. Until there is, this is the only way to run it — and it takes one command. You need Xcode's command line tools; there is nothing else to install, because there are no dependencies.</p>
-      <pre><code>git clone https://github.com/yatindma/task-manager-for-mac.git
-cd task-manager-for-mac
-./build.sh
-open "Task Manager.app"</code></pre>
-      <p class="note" style="margin-left:0;max-width:62ch">When the first release ships it will be a notarised DMG at a permalink that never goes stale, and this section will move below the download button.</p>
-    </div>
-  </section>
-
-  <section id="faq">
-    <div class="wrap">
-      <h2>Questions</h2>
-
-      <details>
-        <summary>How is this different from Activity Monitor?</summary>
-        <div class="body">
-          <p>Both read the same macOS kernel APIs, so the underlying numbers agree. The difference is presentation. Task Manager for Mac reproduces the Windows 11 layout: the same seven tabs in the same order, the same columns, the yellow-to-red load heatmap Activity Monitor has no equivalent of, grouped process trees, and end process tree / suspend / resume in the right-click menu. It exists for people who use Windows and macOS daily and lose their muscle memory on every switch.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary>Why does the GPU column show 0 for every process?</summary>
-        <div class="body">
-          <p>Because macOS does not publish a per-process GPU utilisation API — no public framework exposes that number to a normal application. Rather than estimate it, the column reads 0. The system-wide GPU graph on the Performance tab uses a supported API and is accurate.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary>Why does it ask for my password?</summary>
-        <div class="body">
-          <p>To read CPU usage for processes owned by root and other users, which requires elevated privileges macOS will not grant a sandboxed app. The prompt appears once, when you choose to enable it, and installs a small setuid helper. If you decline, the app works normally except that roughly 116 of about 620 processes on a typical Mac report 0% CPU.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary>Is the helper safe? What does it actually do?</summary>
-        <div class="body">
-          <p>The helper's only job is to read process accounting data — CPU time, memory and I/O counters — and hand it back to the app. It does not open network connections, write files, or persist a background daemon. It is a small amount of Swift in this repository, it is built from the same source you can read, and you can remove it by deleting it. Nothing here asks you to take that on trust: the entire project is open source with zero third-party dependencies, so there is no code in the build that isn't in the repo.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary>Does it work on Intel Macs?</summary>
-        <div class="body">
-          <p>Yes. It targets macOS 14 and later on both Apple Silicon and Intel. It is a native Swift 6 and SwiftUI application — not Electron, not a web view, not a port.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary>Does it slow my Mac down?</summary>
-        <div class="body">
-          <p>A process monitor's cost is its sampling loop. This one polls the kernel on a fixed interval and does no work between samples, the same way Activity Monitor does. It is a native app with no runtime, no bundled browser and no dependencies. If you find a workload where it measurably costs you, that is a bug worth filing.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary>Does Ctrl+Shift+Esc work?</summary>
-        <div class="body">
-          <p>Yes — the shortcut is the point. It's the reflex that survives the platform switch, so it opens the app on macOS too.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary>Is it free? What's the licence?</summary>
-        <div class="body">
-          <p>It is free and open source, with no paid tier, no telemetry and no accounts. See the repository for the licence file.</p>
-        </div>
-      </details>
-    </div>
-  </section>
-</main>
-
-<footer>
-  <div class="wrap">
-    <span>Task Manager for Mac — free and open source. Not affiliated with, endorsed by, or connected to Microsoft or Apple. Windows is a trademark of Microsoft Corporation; macOS is a trademark of Apple Inc.</span>
-    <nav aria-label="Footer">
-      <a href="https://github.com/yatindma/task-manager-for-mac">GitHub</a>
-      <a href="https://github.com/yatindma/task-manager-for-mac/issues">Issues</a>
-      <a href="#limitations">Limitations</a>
-    </nav>
-  </div>
-</footer>
-
-<!-- SoftwareApplication, with only fields that are honestly true today.
-     No aggregateRating: there are no users and no reviews, so there is no rating.
-     Fabricating one violates Google's structured data policy. This means no rich
-     result will appear until real reviews exist — that is expected and correct. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Task Manager for Mac",
-  "description": "A pixel-exact clone of the Windows 11 Task Manager for macOS, with all seven tabs, the load heatmap, and live CPU, memory, disk and network graphs. Native Swift 6 and SwiftUI with zero third-party dependencies.",
   "applicationCategory": "DeveloperApplication",
-  "applicationSubCategory": "System Monitor",
-  "operatingSystem": "macOS 14.0",
-  "processorRequirements": "Apple Silicon or Intel",
+  "operatingSystem": "macOS 14.0 or later",
+  "description": "The Windows 11 Task Manager, running natively on macOS. All seven tabs, the heatmap, and live CPU, memory, disk and network graphs.",
   "url": "https://yatindma.github.io/task-manager-for-mac/",
-  "isAccessibleForFree": true,
+  "downloadUrl": "https://github.com/yatindma/task-manager-for-mac/releases/latest/download/TaskManager.dmg",
   "license": "https://github.com/yatindma/task-manager-for-mac/blob/main/LICENSE",
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "USD"
-  }
+  "author": { "@type": "Person", "name": "Yatin Arora" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareSourceCode",
-  "name": "Task Manager for Mac",
-  "codeRepository": "https://github.com/yatindma/task-manager-for-mac",
-  "programmingLanguage": "Swift",
-  "runtimePlatform": "macOS",
-  "license": "https://github.com/yatindma/task-manager-for-mac/blob/main/LICENSE",
-  "author": {
-    "@type": "Person",
-    "name": "Yatin Arora"
+
+<style>
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f5f5f7;
+  --fg: #1d1d1f;
+  --fg-dim: #6e6e73;
+  --accent: #0071e3;
+  --line: #d2d2d7;
+  --radius: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --bg-alt: #101010;
+    --fg: #f5f5f7;
+    --fg-dim: #a1a1a6;
+    --accent: #4cc2ff;
+    --line: #29292b;
   }
 }
-</script>
+:root[data-theme="light"] {
+  --bg: #ffffff; --bg-alt: #f5f5f7; --fg: #1d1d1f;
+  --fg-dim: #6e6e73; --accent: #0071e3; --line: #d2d2d7;
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --bg-alt: #101010; --fg: #f5f5f7;
+  --fg-dim: #a1a1a6; --accent: #4cc2ff; --line: #29292b;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 22px; }
+
+.hero { text-align: center; padding: 100px 0 0; }
+.hero .icon { width: 104px; height: 104px; margin: 0 auto 28px; }
+h1 {
+  margin: 0 0 16px;
+  font-size: clamp(40px, 7vw, 68px);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+.sub {
+  margin: 0 auto 34px;
+  max-width: 600px;
+  font-size: clamp(19px, 2.4vw, 25px);
+  line-height: 1.35;
+  color: var(--fg-dim);
+  letter-spacing: -0.01em;
+}
+.cta {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 500;
+  padding: 13px 32px;
+  border-radius: 980px;
+  transition: opacity .2s;
+}
+.cta:hover { opacity: .85; text-decoration: none; }
+.trust { margin: 18px 0 0; font-size: 13px; color: var(--fg-dim); }
+.trust a { color: var(--fg-dim); text-decoration: underline; }
+
+.shot { margin-top: 60px; }
+.shot-frame {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-alt);
+}
+.shot-placeholder {
+  aspect-ratio: 1024 / 700;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg-dim); font-size: 14px; text-align: center; padding: 20px;
+}
+
+section { padding: 96px 0 0; }
+section + section { border-top: 1px solid var(--line); margin-top: 96px; }
+h2 {
+  margin: 0 0 18px;
+  font-size: clamp(28px, 3.6vw, 40px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+section > p { max-width: 660px; color: var(--fg-dim); font-size: 19px; margin: 0; }
+section > p strong { color: var(--fg); font-weight: 600; }
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(228px, 1fr));
+  gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden; margin-top: 44px;
+}
+.tab { background: var(--bg); padding: 26px 24px; }
+.tab h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.tab p { margin: 0; font-size: 15px; color: var(--fg-dim); line-height: 1.45; }
+
+.limits { list-style: none; padding: 0; margin: 34px 0 0; max-width: 660px; }
+.limits li { padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+.limits li:first-child { border-top: 1px solid var(--line); }
+.limits b { font-weight: 600; }
+.limits span { color: var(--fg-dim); }
+
+details { border-bottom: 1px solid var(--line); max-width: 720px; }
+details:first-of-type { border-top: 1px solid var(--line); margin-top: 34px; }
+summary {
+  padding: 20px 0; cursor: pointer; font-size: 17px; font-weight: 500;
+  list-style: none; display: flex; justify-content: space-between; gap: 16px;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; color: var(--fg-dim); font-weight: 400; font-size: 22px; line-height: 1; }
+details[open] summary::after { content: "\2212"; }
+details p { margin: 0 0 22px; color: var(--fg-dim); font-size: 16px; max-width: 640px; }
+
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; background: var(--bg-alt); padding: 2px 6px; border-radius: 5px; }
+pre {
+  background: var(--bg-alt); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 20px; overflow-x: auto; font-size: 14px; max-width: 660px; margin: 34px 0 0;
+}
+pre code { background: none; padding: 0; }
+
+footer {
+  border-top: 1px solid var(--line); margin-top: 96px;
+  padding: 40px 0 60px; font-size: 13px; color: var(--fg-dim); text-align: center;
+}
+footer a { color: var(--fg-dim); }
+footer p { margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<main class="wrap">
+
+  <div class="hero">
+    <img class="icon" src="icon.png" width="104" height="104" alt="">
+    <h1>Task Manager for Mac</h1>
+    <p class="sub">The Windows 11 Task Manager. Same seven tabs, same heatmap, same graphs — running natively on your Mac.</p>
+    <a class="cta" href="https://github.com/yatindma/task-manager-for-mac/releases/latest/download/TaskManager.dmg">Download for macOS</a>
+    <p class="trust">Free and open source · macOS 14+ · Apple Silicon and Intel · <a href="https://github.com/yatindma/task-manager-for-mac">Source on GitHub</a></p>
+
+    <div class="shot">
+      <div class="shot-frame">
+        <!-- TODO(screenshot): replace this entire .shot-placeholder div with:
+             <img src="screenshot-processes.png" width="2048" height="1400"
+                  alt="Task Manager on macOS showing the Processes tab, CPU and Memory columns heat-mapped yellow to red.">
+             Capture the Processes tab sorted by CPU with several apps running so the
+             heatmap is visible. A 1024x700 window on a Retina display is 2048x1400. -->
+        <div class="shot-placeholder">Screenshot of the Processes tab goes here</div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>You already know how to use it</h2>
+    <p>That is the entire point. If you spend your week on Windows and your weekend on a Mac, Activity Monitor makes you translate every instinct you have — different words, different layout, no heatmap. <strong>Here the columns, the right-click menu, the sort order and the colours are the ones your hands already expect.</strong></p>
+
+    <div class="tabs">
+      <div class="tab"><h3>Processes</h3><p>The grouped tree, and the heatmap running yellow to red as things heat up.</p></div>
+      <div class="tab"><h3>Performance</h3><p>Live CPU, memory, disk, network and GPU graphs, on the Windows grid.</p></div>
+      <div class="tab"><h3>App history</h3><p>CPU time and network per app, accumulated across days.</p></div>
+      <div class="tab"><h3>Startup apps</h3><p>Everything that launches at login. Switch it off.</p></div>
+      <div class="tab"><h3>Users</h3><p>Who is signed in, and what they are running.</p></div>
+      <div class="tab"><h3>Details</h3><p>The dense list — PID, threads, priority, path.</p></div>
+      <div class="tab"><h3>Services</h3><p>launchd daemons and agents, the macOS equivalent.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Three things it cannot do</h2>
+    <p>macOS publishes no API for these. Rather than show a number that looks right and is not, it shows nothing.</p>
+    <ul class="limits">
+      <li><b>GPU % per process</b> — <span>the overall GPU graph is live; the per-app column reads 0. Activity Monitor does not have it either.</span></li>
+      <li><b>Startup impact</b> — <span>macOS never measures it.</span></li>
+      <li><b>Set affinity</b> — <span>no such control exists on macOS. The menu item is visibly disabled, not quietly hidden.</span></li>
+    </ul>
+    <p style="margin-top:30px"><a href="https://github.com/yatindma/task-manager-for-mac/blob/main/docs/limitations.md">The full honest list →</a></p>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+
+    <details>
+      <summary>Why does macOS say it cannot verify the app?</summary>
+      <p>Because it is not notarized, which needs a paid Apple Developer account. Right-click the app → <b>Open</b> → <b>Open</b>. Once only, then it launches normally forever. Every line of source is on GitHub if you would rather build it yourself.</p>
+    </details>
+
+    <details>
+      <summary>Why does it ask for my password?</summary>
+      <p>Only if you want it to. macOS hides CPU for processes you do not own — about one in five, including <code>WindowServer</code> and <code>kernel_task</code>. A 150-line helper reads those stats, and installing it setuid-root takes your password once. It answers exactly two questions and never runs a command. It is the same mechanism <code>/bin/ps</code> has used for decades. Decline it and everything else still works.</p>
+    </details>
+
+    <details>
+      <summary>Does it slow my Mac down?</summary>
+      <p>It uses roughly 0.8% of an eight-core Mac while open, and nothing at all when closed — there is no menu bar agent and no background daemon.</p>
+    </details>
+
+    <details>
+      <summary>Why do the numbers differ from Activity Monitor?</summary>
+      <p>Windows normalises CPU across all your cores, so the column maxes out at 100%. Activity Monitor reports per-core, so one busy process can read 800% on an eight-core Mac. This app follows Windows. If a number differs by roughly your core count, that is why.</p>
+    </details>
+
+    <details>
+      <summary>Does it work on Intel?</summary>
+      <p>Yes. Apple Silicon and Intel, macOS 14 and later. Nothing is tuned to one chip.</p>
+    </details>
+  </section>
+
+  <section>
+    <h2>Or build it yourself</h2>
+    <pre><code>git clone https://github.com/yatindma/task-manager-for-mac.git
+cd task-manager-for-mac
+./build.sh</code></pre>
+    <p style="margin-top:26px">Swift 6 and SwiftUI, about 5 MB. No packages to install, nothing to configure, zero third-party dependencies. You will need Xcode present — <code>build.sh</code> finds it on its own.</p>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>MIT licensed · <a href="https://github.com/yatindma/task-manager-for-mac">GitHub</a> · <a href="https://github.com/yatindma/task-manager-for-mac/issues">Report an issue</a></p>
+  <p>Not affiliated with Microsoft or Apple.</p>
+</footer>
+
 </body>
 </html>
