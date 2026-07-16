@@ -17,13 +17,17 @@ fi
 # A release ships to both architectures, because the README and the site both promise
 # Intel. A debug build stays native — cross-compiling doubles the build for no gain
 # on the machine doing the building.
-ARCHS=()
+# Empty-array expansion is an "unbound variable" under `set -u` in bash 3.2, which is
+# what macOS ships — so a debug build cannot just expand an empty ARCHS.
 if [ "$CONFIG" = release ]; then
     ARCHS=(--arch arm64 --arch x86_64)
+else
+    ARCHS=()
 fi
+archs() { [ ${#ARCHS[@]} -eq 0 ] || printf '%s\n' "${ARCHS[@]}"; }
 
-swift build -c "$CONFIG" --package-path "$ROOT" "${ARCHS[@]}"
-BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" "${ARCHS[@]}" --show-bin-path)"
+swift build -c "$CONFIG" --package-path "$ROOT" $(archs)
+BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" $(archs) --show-bin-path)"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

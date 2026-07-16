@@ -214,8 +214,14 @@ struct TableHeaderView: View {
                     }
                     // highPriority so the drag wins outright rather than racing the
                     // scroll view and the row gestures underneath it.
+                    //
+                    // minimumDistance must not be 0: the strip is 11pt wide and sits
+                    // over the header, so a zero-distance drag turns every click near a
+                    // column edge into a resize — it writes a width on the first
+                    // onChanged and persists it, and the sort tap underneath never
+                    // fires. A pixel of travel separates "clicked" from "dragged".
                     .highPriorityGesture(
-                        DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                        DragGesture(minimumDistance: 2, coordinateSpace: .global)
                             .onChanged { value in
                                 // A flexible column has no measured width until it is
                                 // dragged; anchor it at its current default instead.
