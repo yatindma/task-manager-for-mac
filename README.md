@@ -48,6 +48,8 @@ This is the actual Task Manager. Same seven tabs. Same colours. Same graphs. On 
 
 Right-click anything to **End task**, **End process tree**, **Suspend** or **Resume** — exactly like Windows.
 
+![The Performance tab — a live CPU graph, with speed, cores, cache and uptime read from the machine itself](docs/screenshot-performance.png)
+
 <br>
 
 ## Three things it can't do
